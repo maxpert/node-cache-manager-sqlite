@@ -10,7 +10,7 @@ A modern SQlite cache store for [node-cache-manager](https://github.com/BryanDon
 ## Installation
 
 ```
-npm i cache-manager-sqlite
+npm i node-cache-manager-sqlite
 ```
 
 ## Requirements
@@ -21,7 +21,7 @@ npm i cache-manager-sqlite
 ## Usage
 
 ```js
-const sqliteStore = require('cache-manager-sqlite')
+const sqliteStore = require('node-cache-manager-sqlite')
 const cacheManager = require('cache-manager')
 
 // SQLite :memory: cache store
