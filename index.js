@@ -5,11 +5,20 @@ const ConfigurePragmas = `
 PRAGMA main.synchronous = NORMAL;
 PRAGMA main.journal_mode = WAL;
 `
-const CreateTableStatement = "CREATE TABLE IF NOT EXISTS %s (key TEXT PRIMARY KEY, val BLOB, created_at INTEGER, expire_at INTEGER);"
+const CreateTableStatement = `
+CREATE TABLE IF NOT EXISTS %s (
+    key TEXT PRIMARY KEY, 
+    val BLOB, 
+    created_at INTEGER, 
+    expire_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS index_expire_%s ON %s(expire_at);
+`
 const SelectKeyStatement = "SELECT * FROM %s WHERE key IN ($keys)"
 const UpsertStatement = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES ($key, $val, $created_at, $expire_at)"
 const DeleteStatement = "DELETE FROM %s WHERE key IN ($keys)"
 const TruncateStatement = "DELETE FROM %s"
+const PurgeExpiredStatement = "DELETE FROM %s WHERE expire_at < $ts"
 
 function now() {
     return new Date().getTime()
@@ -66,7 +75,7 @@ class SqliteCacheAdapter {
 
         this.db = new sqlite.Database(path, mode, options.onOpen)
         this.db.serialize(() => {
-            const stmt = ConfigurePragmas + util.format(CreateTableStatement, name)
+            const stmt = ConfigurePragmas + util.format(CreateTableStatement, name, name, name)
             this.db.exec(stmt, options.onReady)
         })
     }
@@ -87,12 +96,18 @@ class SqliteCacheAdapter {
     get(key, options, callback) {
         const ts = now()
         return promisified(liftCallback(options, callback), cb => {
-            this._fetch_all([key], (err, rows) => {
+            this._fetch_all([key], (err, rs) => {
                 if (err) {
                     return cb(err)
                 }
     
-                rows = rows.filter(x => x.expire_at > ts)
+                const rows = rs.filter(r => r.expire_at > ts)
+                
+                // Schedule cleanup for expired rows
+                if (rows.length < rs.length) {
+                    process.nextTick(() => this.#purgeExpired())
+                }
+
                 if (rows.length < 1) {
                     return cb(null, undefined)
                 }
@@ -158,6 +173,14 @@ class SqliteCacheAdapter {
     
                 cb(null, rows[0].expire_at - now())
             })
+        })
+    }
+
+    #purgeExpired() {
+        this.db.serialize(() => {
+            const stmt = util.format(PurgeExpiredStatement, this.#name)
+            const ts = now()
+            this.db.run(stmt, {$ts: ts})
         })
     }
 }
