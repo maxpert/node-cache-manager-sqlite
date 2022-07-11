@@ -1,6 +1,6 @@
 {
-  "name": "node-cache-manager-sqlite",
-  "version": "0.1.1",
+  "name": "cache-manager-sqlite",
+  "version": "0.1.2",
   "description": "A modern SQLite store for node-cache-manager",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "url": "https://github.com/maxpert/node-cache-manager-sqlite.git"
   },
   "keywords": [
-    "cache-managers",
+    "cache-manager",
     "sqlite"
   ],
   "author": "Zohaib Sibte Hassan",
