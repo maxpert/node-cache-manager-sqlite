@@ -6,6 +6,10 @@
   "scripts": {
     "test": "nyc --reporter=html mocha"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxpert/node-cache-manager-sqlite.git"
+  },
   "keywords": [
     "cache-managers",
     "sqlite"
