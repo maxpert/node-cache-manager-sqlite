@@ -1,0 +1,27 @@
+{
+  "name": "node-cache-manager-sqlite",
+  "version": "0.1.0",
+  "description": "A modern SQLite store for node-cache-manager",
+  "main": "index.js",
+  "scripts": {
+    "test": "nyc --reporter=html mocha"
+  },
+  "keywords": [
+    "cache-managers",
+    "sqlite"
+  ],
+  "author": "Zohaib Sibte Hassan",
+  "license": "MIT",
+  "dependencies": {
+    "sqlite3": "^5.0.8"
+  },
+  "devDependencies": {
+    "cache-manager": "^4.1.0",
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "sinon": "^14.0.0"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  }
+}
