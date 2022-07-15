@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS %s (
 );
 CREATE INDEX IF NOT EXISTS index_expire_%s ON %s(expire_at);
 `
-const SelectKeyStatement = "SELECT * FROM %s WHERE key IN ($keys)"
+const SelectKeyStatement = "SELECT * FROM %s WHERE key IN "
 const UpsertStatement = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES ($key, $val, $created_at, $expire_at)"
 const DeleteStatement = "DELETE FROM %s WHERE key IN ($keys)"
 const TruncateStatement = "DELETE FROM %s"
@@ -82,8 +82,10 @@ class SqliteCacheAdapter {
 
     _fetch_all(keys, cb) {
         this.db.serialize(() => {
-            const stmt = util.format(SelectKeyStatement, this.#name)
-            this.db.all(stmt, {$keys: keys}, (err, rows) => {
+            const holders = '?'.repeat(keys.length).split('').join(', ')
+            const postFix = `(${holders})`
+            const stmt = util.format(SelectKeyStatement + postFix, this.#name)
+            this.db.all(stmt, keys, (err, rows) => {
                 if (err) {
                     return cb(err)
                 }
@@ -93,10 +95,10 @@ class SqliteCacheAdapter {
         })
     }
 
-    get(key, options, callback) {
-        const ts = now()
+    mget(keys, options, callback) {
         return promisified(liftCallback(options, callback), cb => {
-            this._fetch_all([key], (err, rs) => {
+            const ts = now()
+            this._fetch_all(keys, (err, rs) => {
                 if (err) {
                     return cb(err)
                 }
@@ -108,11 +110,21 @@ class SqliteCacheAdapter {
                     process.nextTick(() => this.#purgeExpired())
                 }
 
-                if (rows.length < 1) {
-                    return cb(null, undefined)
+                return cb(null, rows.map(row => this.#deserialize(row.val)))
+            })
+        })
+    }
+
+    get(key, options, callback) {
+        return promisified(liftCallback(options, callback), cb => {
+            const opts = liftFirst('object', options) || {}
+            this.mget([key], opts, (err, rows) => {
+                if (err) {
+                    return cb(err)
                 }
-    
-                return cb(null, JSON.parse(rows[0].val))
+
+                const rs = rows.length > 0 ? rows[0] : null
+                return cb(null, rs)
             })
         })
     }
@@ -126,7 +138,7 @@ class SqliteCacheAdapter {
             this.db.serialize(() => {
                 const stmt = util.format(UpsertStatement, this.#name)
                 const ts = now()
-                const binding = {$key: key, $val: JSON.stringify(value), $created_at: ts, $expire_at: ts + ttl}
+                const binding = {$key: key, $val: this.#serialize(value), $created_at: ts, $expire_at: ts + ttl}
     
                 this.db.run(stmt, binding, function (err) {
                     const {lastID, changes} = this
@@ -174,6 +186,18 @@ class SqliteCacheAdapter {
                 cb(null, rows[0].expire_at - now())
             })
         })
+    }
+
+    #serialize(obj) {
+        return JSON.stringify(obj)
+    }
+
+    #deserialize(payload) {
+        try {
+            return JSON.parse(payload)
+        } catch(e) {
+            return null
+        }
     }
 
     #purgeExpired() {

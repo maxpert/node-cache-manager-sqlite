@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3')
 
 const sqliteStore = require('../index')
 
-describe('cacheManager.caching', () => {
+describe('cacheManager callback', () => {
     it('should be able to open via options', (done) => {
         cacheManager.caching({
             store: sqliteStore,
@@ -34,7 +34,7 @@ describe('cacheManager callback', () => {
 
     it('get should return null when value does not exist', (done) => {
         cache.get('!!!' + Math.random(), (err, res) => {
-            assert.equal(res, undefined)
+            assert.equal(res, null)
             done(err)
         })
         
@@ -50,6 +50,11 @@ describe('cacheManager callback', () => {
 describe('cacheManager promised', () => {
     const cache = cacheManager.caching({
         store: sqliteStore
+    })
+
+    it('set should serialized bad object to null', async () => {
+        await cache.set('foo-bad', function () { })
+        assert.equal(await cache.get('foo-bad'), null)
     })
 
     it('get value when TTL within range from set', async () => {
@@ -116,10 +121,18 @@ describe('cacheManager promised', () => {
         const valu = {foo: 1}
 
         await cache.set(key, valu, -1)
-        assert(await cache.get(key) === undefined)
+        assert.equal(await cache.get(key), null)
 
         await cache.set(key, valu, {ttl: -1})
-        assert(await cache.get(key) === undefined)
+        assert.equal(await cache.get(key), null)
+    })
+
+    it('mget fetches array of multiple objects ', async () => {
+        await cache.set('foo1', 1)
+        await cache.set('foo2', 2)
+        await cache.set('foo3', 3)
+        const rs = await cache.mget(['foo1', 'foo2', 'foo3'])
+        assert.deepEqual(rs, [1, 2, 3])
     })
 })
 
@@ -156,6 +169,16 @@ describe('Sqlite failures failures', () => {
             assert.equal(e.message, 'Fake error')
         }
     })
+
+    it('should return null value if stored value is junk', async () => {
+        const ts = new Date().getTime()
+        allSpy.yieldsRight(null, [{key: 'foo', val: '~junk~', created_at: ts, expire_at: ts + 36000}])
+        assert.equal(await cache.get("foo"), null)
+
+        allSpy.reset()
+        allSpy.yieldsRight(null, [{key: 'foo', val: 'undefined', created_at: ts, expire_at: ts + 36000}])
+        assert.equal(await cache.get("foo"), null)
+    })
 })
 
 
@@ -172,6 +195,6 @@ describe('sqliteStore construction', () => {
         const valu = {foo: 1}
 
         await cache.set(key, valu)
-        assert(await cache.get(key) === undefined)
+        assert.equal(await cache.get(key), null)
     })
 })
