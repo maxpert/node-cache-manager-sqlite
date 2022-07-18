@@ -1,6 +1,8 @@
 const sqlite = require('sqlite3')
 const util = require('util')
 
+const serializers = require('./serializers')
+
 const ConfigurePragmas = `
 PRAGMA main.synchronous = NORMAL;
 PRAGMA main.journal_mode = WAL;
@@ -75,6 +77,7 @@ class SqliteCacheAdapter {
      */
     db = null
     #name = null
+    #serializer = null
     #default_ttl = 24 * 60 * 60 * 1000
 
     /**
@@ -86,6 +89,7 @@ class SqliteCacheAdapter {
         const mode = options.flags || (sqlite.OPEN_CREATE | sqlite.OPEN_READWRITE)
         this.#name = name
         this.#default_ttl = options.ttl === undefined ? this.#default_ttl : options.ttl
+        this.#serializer = serializers['cbor' || options.serializer]
 
         this.db = new sqlite.Database(path, mode, options.onOpen)
         this.db.serialize(() => {
@@ -236,12 +240,16 @@ class SqliteCacheAdapter {
     }
 
     #serialize(obj) {
-        return JSON.stringify(obj)
+        try {
+            return this.#serializer.serialize(obj)
+        } catch(e) {
+            return null
+        }
     }
 
     #deserialize(payload) {
         try {
-            return JSON.parse(payload)
+            return this.#serializer.deserialize(payload)
         } catch(e) {
             return null
         }
