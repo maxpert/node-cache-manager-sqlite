@@ -19,6 +19,7 @@ const UpsertStatement = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_
 const DeleteStatement = "DELETE FROM %s WHERE key IN ($keys)"
 const TruncateStatement = "DELETE FROM %s"
 const PurgeExpiredStatement = "DELETE FROM %s WHERE expire_at < $ts"
+const UpsertManyStatementPrefix = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES "
 
 function now() {
     return new Date().getTime()
@@ -30,6 +31,19 @@ function liftFirst(type, ...args) {
 
 function liftCallback(...args) {
     return liftFirst('function', ...args)
+}
+
+function tuplize(args, size) {
+    const ret = []
+    for (let i = 0; i <args.length; i += size) {
+        ret.push(args.slice(i, i + size))
+    }
+
+    return ret
+}
+
+function generatePlaceHolders(length) {
+    return '(' + ('?'.repeat(length).split('').join(', ')) + ')'
 }
 
 /**
@@ -82,8 +96,7 @@ class SqliteCacheAdapter {
 
     _fetch_all(keys, cb) {
         this.db.serialize(() => {
-            const holders = '?'.repeat(keys.length).split('').join(', ')
-            const postFix = `(${holders})`
+            const postFix = generatePlaceHolders(keys.length)
             const stmt = util.format(SelectKeyStatementPrefix + postFix, this.#name)
             this.db.all(stmt, keys, (err, rows) => {
                 if (err) {
@@ -111,6 +124,40 @@ class SqliteCacheAdapter {
                 }
 
                 return cb(null, rows.map(row => this.#deserialize(row.val)))
+            })
+        })
+    }
+
+    mset(...args) {
+        /* 
+        This function does the awkward juggling with because mset instead of taking sane way of having
+        key value pairs as object or nested pairs is flattened in array. What does that mean? 
+        your arguments can will be:
+            key1, value1, key2, value2 .... [options, [callback]]
+        IDK what were authors smoking when coming up with this design but it is what it is.
+        */
+        const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined
+        let options = {}
+        
+        if (args.length % 2 > 0) {
+            const last = args[args.length - 1]
+            if (last !== null && typeof last === 'object') {
+                options = args.pop()
+            }
+        }
+
+        const tuples = tuplize(args, 2)
+        return promisified(callback, cb => {
+            const ttl = options.ttl || this.#default_ttl
+            const ts = now()
+            const expire = ts + ttl            
+            const binding = tuples.flatMap(t => [...t, ts, expire])
+
+            const postfix = tuples.map(d => generatePlaceHolders(d.length + 2)).join(', ')
+            const stmt = util.format(UpsertManyStatementPrefix + postfix, this.#name)
+
+            this.db.run(stmt, binding, function (err) {
+                return cb(err, {})
             })
         })
     }

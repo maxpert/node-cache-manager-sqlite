@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3')
 
 const sqliteStore = require('../index')
 
-describe('cacheManager callback', () => {
+describe('cacheManager open callback', () => {
     it('should be able to open via options', (done) => {
         cacheManager.caching({
             store: sqliteStore,
@@ -42,6 +42,12 @@ describe('cacheManager callback', () => {
     
     it('set should serialize objects', (done) => {
         cache.set('foo', {foo: 1}, (err) => {
+            done(err)
+        })
+    })
+
+    it('mset sets multiple values in single call', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, (err) => {
             done(err)
         })
     })
@@ -133,6 +139,18 @@ describe('cacheManager promised', () => {
         await cache.set('foo3', 3)
         const rs = await cache.mget(['foo1', 'foo2', 'foo3'])
         assert.deepEqual(rs, [1, 2, 3])
+    })
+
+    it('mset sets multiple values in single call', async () => {
+        await cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3)
+        const rs = await cache.mget(['goo1', 'goo2', 'goo3'])
+        assert.deepEqual(rs, [1, 2, 3])
+    })
+
+    it('mset respects ttl if passed', async () => {
+        await cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: -1})
+        const rs = await cache.mget(['goo1', 'goo2', 'goo3'])
+        assert.deepEqual(rs, [])
     })
 })
 
