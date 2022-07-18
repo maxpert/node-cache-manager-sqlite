@@ -151,7 +151,7 @@ class SqliteCacheAdapter {
             const ttl = options.ttl || this.#default_ttl
             const ts = now()
             const expire = ts + ttl            
-            const binding = tuples.flatMap(t => [...t, ts, expire])
+            const binding = tuples.flatMap(t => [t[0], this.#serialize(t[1]), ts, expire])
 
             const postfix = tuples.map(d => generatePlaceHolders(d.length + 2)).join(', ')
             const stmt = util.format(UpsertManyStatementPrefix + postfix, this.#name)
