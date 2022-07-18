@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS %s (
 );
 CREATE INDEX IF NOT EXISTS index_expire_%s ON %s(expire_at);
 `
-const SelectKeyStatement = "SELECT * FROM %s WHERE key IN "
+const SelectKeyStatementPrefix = "SELECT * FROM %s WHERE key IN "
 const UpsertStatement = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES ($key, $val, $created_at, $expire_at)"
 const DeleteStatement = "DELETE FROM %s WHERE key IN ($keys)"
 const TruncateStatement = "DELETE FROM %s"
@@ -84,7 +84,7 @@ class SqliteCacheAdapter {
         this.db.serialize(() => {
             const holders = '?'.repeat(keys.length).split('').join(', ')
             const postFix = `(${holders})`
-            const stmt = util.format(SelectKeyStatement + postFix, this.#name)
+            const stmt = util.format(SelectKeyStatementPrefix + postFix, this.#name)
             this.db.all(stmt, keys, (err, rows) => {
                 if (err) {
                     return cb(err)
