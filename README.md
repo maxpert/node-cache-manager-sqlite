@@ -6,6 +6,7 @@ A modern SQlite cache store for [node-cache-manager](https://github.com/BryanDon
  - `async`/`await` support with Promise
  - 100% test coverage and production ready
  - Smart purging support
+ - Optimized `mset`/`mget` support
 
 ## Installation
 
@@ -16,7 +17,7 @@ npm i cache-manager-sqlite
 ## Requirements
 
  - SQLite 3 with [sqlite3 package](https://github.com/TryGhost/node-sqlite3)
- - Node 12+
+ - Node 14+
 
 ## Usage
 
