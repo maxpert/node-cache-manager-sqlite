@@ -51,11 +51,18 @@ describe('cacheManager callback', () => {
             done(err)
         })
     })
+
+    it('mset sets multiple values with TTL', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: 10}, (err) => {
+            done(err)
+        })
+    })
 })
 
 describe('cacheManager promised', () => {
     const cache = cacheManager.caching({
-        store: sqliteStore
+        store: sqliteStore,
+        path: '/tmp/test1.db'
     })
 
     it('set should serialized bad object to null', async () => {
@@ -148,8 +155,8 @@ describe('cacheManager promised', () => {
     })
 
     it('mset respects ttl if passed', async () => {
-        await cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: -1})
-        const rs = await cache.mget(['goo1', 'goo2', 'goo3'])
+        await cache.mset('too1', 1, 'too2', 2, 'too3', 3, {ttl: -1})
+        const rs = await cache.mget(['too1', 'too2', 'too3'])
         assert.deepEqual(rs, [])
     })
 })

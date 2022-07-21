@@ -1,6 +1,8 @@
 const sqlite = require('sqlite3')
 const util = require('util')
 
+const serializers = require('./serializers')
+
 const ConfigurePragmas = `
 PRAGMA main.synchronous = NORMAL;
 PRAGMA main.journal_mode = WAL;
@@ -15,11 +17,14 @@ CREATE TABLE IF NOT EXISTS %s (
 CREATE INDEX IF NOT EXISTS index_expire_%s ON %s(expire_at);
 `
 const SelectKeyStatementPrefix = "SELECT * FROM %s WHERE key IN "
-const UpsertStatement = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES ($key, $val, $created_at, $expire_at)"
 const DeleteStatement = "DELETE FROM %s WHERE key IN ($keys)"
 const TruncateStatement = "DELETE FROM %s"
 const PurgeExpiredStatement = "DELETE FROM %s WHERE expire_at < $ts"
 const UpsertManyStatementPrefix = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES "
+
+function isObject(o) {
+    return o !== null && typeof o === 'object'
+}
 
 function now() {
     return new Date().getTime()
@@ -75,7 +80,10 @@ class SqliteCacheAdapter {
      */
     db = null
     #name = null
-    #default_ttl = 24 * 60 * 60 * 1000
+    #serializer = null
+
+    // TTL in seconds
+    #default_ttl = 24 * 60 * 60
 
     /**
      * @param {string} name of key-value space
@@ -84,8 +92,10 @@ class SqliteCacheAdapter {
      */
     constructor(name, path, options) {
         const mode = options.flags || (sqlite.OPEN_CREATE | sqlite.OPEN_READWRITE)
+        const ser = options.serializer
         this.#name = name
-        this.#default_ttl = options.ttl === undefined ? this.#default_ttl : options.ttl
+        this.#default_ttl = typeof options.ttl === 'number' ? options.ttl : this.#default_ttl
+        this.#serializer = isObject(ser) ? ser : serializers[ser || 'json']
 
         this.db = new sqlite.Database(path, mode, options.onOpen)
         this.db.serialize(() => {
@@ -139,25 +149,23 @@ class SqliteCacheAdapter {
         const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined
         let options = {}
         
-        if (args.length % 2 > 0) {
-            const last = args[args.length - 1]
-            if (last !== null && typeof last === 'object') {
-                options = args.pop()
-            }
+        if (args.length % 2 > 0 && isObject(args[args.length - 1])) {
+            options = args.pop()
         }
 
         const tuples = tuplize(args, 2)
         return promisified(callback, cb => {
-            const ttl = options.ttl || this.#default_ttl
+            const ttl = (options.ttl || this.#default_ttl) * 1000
             const ts = now()
             const expire = ts + ttl            
-            const binding = tuples.flatMap(t => [t[0], this.#serialize(t[1]), ts, expire])
-
+            const binding = tuples.map(t => [t[0], this.#serialize(t[1]), ts, expire])
+                                  .filter(t => t[1] !== null && t[1] !== undefined)
+                                  .flatMap(t => t)
             const postfix = tuples.map(d => generatePlaceHolders(d.length + 2)).join(', ')
             const stmt = util.format(UpsertManyStatementPrefix + postfix, this.#name)
 
             this.db.run(stmt, binding, function (err) {
-                return cb(err, {})
+                return cb(err, tuples.length == binding.length)
             })
         })
     }
@@ -179,20 +187,13 @@ class SqliteCacheAdapter {
     set(key, value, ttl, options, callback) {
         callback = liftCallback(ttl, options, callback)
         options = liftFirst('object', ttl, options) || {}
-        ttl = liftFirst('number', ttl) || options.ttl || this.#default_ttl
+        ttl = (liftFirst('number', ttl) || options.ttl || this.#default_ttl) * 1000
 
-        return promisified(callback, cb => {
-            this.db.serialize(() => {
-                const stmt = util.format(UpsertStatement, this.#name)
-                const ts = now()
-                const binding = {$key: key, $val: this.#serialize(value), $created_at: ts, $expire_at: ts + ttl}
-    
-                this.db.run(stmt, binding, function (err) {
-                    const {lastID, changes} = this
-                    return cb(err, {lastID, changes})
-                })
-            })
-        })
+        if (callback) {
+            return this.mset(key, value, {...options, ttl}, callback)
+        }
+        
+        return this.mset(key, value, {...options, ttl})
     }
 
     del(key, options, callback) {
@@ -236,12 +237,16 @@ class SqliteCacheAdapter {
     }
 
     #serialize(obj) {
-        return JSON.stringify(obj)
+        try {
+            return this.#serializer.serialize(obj)
+        } catch(e) {
+            return null
+        }
     }
 
     #deserialize(payload) {
         try {
-            return JSON.parse(payload)
+            return this.#serializer.deserialize(payload)
         } catch(e) {
             return null
         }

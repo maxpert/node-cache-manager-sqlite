@@ -17,6 +17,7 @@
   "author": "Zohaib Sibte Hassan",
   "license": "MIT",
   "dependencies": {
+    "cbor-x": "^1.3.1",
     "sqlite3": "^5.0.8"
   },
   "devDependencies": {
