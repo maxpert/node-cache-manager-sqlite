@@ -51,6 +51,12 @@ describe('cacheManager callback', () => {
             done(err)
         })
     })
+
+    it('mset sets multiple values with TTL', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: 10}, (err) => {
+            done(err)
+        })
+    })
 })
 
 describe('cacheManager promised', () => {

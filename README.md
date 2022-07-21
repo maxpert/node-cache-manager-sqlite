@@ -32,7 +32,9 @@ const cacheManager = require('cache-manager')
 const memStoreCache = cacheManager.caching({
     store: sqliteStore,
     serializer: 'cbor', // default is 'json'
-    ttl: 20 // TTL in seconds
+    options: {
+        ttl: 20 // TTL in seconds
+    }
 })
 
 // On disk cache on employees table
@@ -56,7 +58,7 @@ const redisStore = require('cache-manager-ioredis')
 const sqliteStore = require('cache-manager-sqlite')
 
 const redisCache = cacheManager.caching({ store: redisStore, db: 0, ttl: 600 })
-const sqliteCache = cacheManager.caching({ store: sqliteStore, path: '/cache.db', name: 'users', ttl: 600 })
+const sqliteCache = cacheManager.caching({ store: sqliteStore, path: '/cache.db', name: 'users', options{ ttl: 600 } })
 
 const multiCache = cacheManager.multiCaching([sqliteCache, redisCache])
 
