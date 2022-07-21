@@ -118,8 +118,16 @@ class SqliteCacheAdapter {
         })
     }
 
-    mget(keys, options, callback) {
-        return promisified(liftCallback(options, callback), cb => {
+    mget(...args) {
+        const callback = typeof args[args.length - 1] === 'function' ? args.pop() : undefined
+        let options = {}
+        
+        if (isObject(args[args.length - 1])) {
+            options = args.pop()
+        }
+
+        const keys = args
+        return promisified(callback, cb => {
             const ts = now()
             this._fetch_all(keys, (err, rs) => {
                 if (err) {
@@ -133,7 +141,7 @@ class SqliteCacheAdapter {
                     process.nextTick(() => this.#purgeExpired())
                 }
 
-                return cb(null, rows.map(row => this.#deserialize(row.val)))
+                return cb(null, rs.map(r => r.expire_at > ts ? this.#deserialize(r.val) : undefined))
             })
         })
     }

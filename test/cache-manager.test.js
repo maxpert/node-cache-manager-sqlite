@@ -27,38 +27,6 @@ describe('cacheManager open callback', () => {
     })
 })
 
-describe('cacheManager callback', () => {
-    const cache = cacheManager.caching({
-        store: sqliteStore
-    })
-
-    it('get should return null when value does not exist', (done) => {
-        cache.get('!!!' + Math.random(), (err, res) => {
-            assert.equal(res, null)
-            done(err)
-        })
-        
-    })
-    
-    it('set should serialize objects', (done) => {
-        cache.set('foo', {foo: 1}, (err) => {
-            done(err)
-        })
-    })
-
-    it('mset sets multiple values in single call', (done) => {
-        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, (err) => {
-            done(err)
-        })
-    })
-
-    it('mset sets multiple values with TTL', (done) => {
-        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: 10}, (err) => {
-            done(err)
-        })
-    })
-})
-
 describe('cacheManager promised', () => {
     const cache = cacheManager.caching({
         store: sqliteStore,
@@ -144,20 +112,25 @@ describe('cacheManager promised', () => {
         await cache.set('foo1', 1)
         await cache.set('foo2', 2)
         await cache.set('foo3', 3)
-        const rs = await cache.mget(['foo1', 'foo2', 'foo3'])
+        const rs = await cache.mget('foo1', 'foo2', 'foo3')
+        assert.deepEqual(rs, [1, 2, 3])
+    })
+
+    it('mget can handle options', async () => {
+        const rs = await cache.mget('foo1', 'foo2', 'foo3', {})
         assert.deepEqual(rs, [1, 2, 3])
     })
 
     it('mset sets multiple values in single call', async () => {
         await cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3)
-        const rs = await cache.mget(['goo1', 'goo2', 'goo3'])
+        const rs = await cache.mget('goo1', 'goo2', 'goo3')
         assert.deepEqual(rs, [1, 2, 3])
     })
 
     it('mset respects ttl if passed', async () => {
         await cache.mset('too1', 1, 'too2', 2, 'too3', 3, {ttl: -1})
-        const rs = await cache.mget(['too1', 'too2', 'too3'])
-        assert.deepEqual(rs, [])
+        const rs = await cache.mget('too1', 'too2', 'too3')
+        assert.deepEqual(rs, [undefined, undefined, undefined])
     })
 })
 
@@ -221,5 +194,50 @@ describe('sqliteStore construction', () => {
 
         await cache.set(key, valu)
         assert.equal(await cache.get(key), null)
+    })
+})
+
+
+describe('cacheManager callback', () => {
+    const cache = cacheManager.caching({
+        store: sqliteStore
+    })
+
+    it('get should return null when value does not exist', (done) => {
+        cache.get('!!!' + Math.random(), (err, res) => {
+            assert.equal(res, null)
+            done(err)
+        })
+        
+    })
+    
+    it('set should serialize objects', (done) => {
+        cache.set('foo', {foo: 1}, (err) => {
+            done(err)
+        })
+    })
+
+    it('mset sets multiple values in single call', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, (err) => {
+            done(err)
+        })
+    })
+
+    it('mset sets multiple values with TTL', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: 10}, (err) => {
+            done(err)
+        })
+    })
+
+    it('mget gets multiple values', (done) => {
+        cache.mset('goo1', 1, 'goo2', 2, 'goo3', 3, {ttl: 10}, (err) => {
+            if (err) {
+                return done(err)    
+            }
+            
+            cache.mget('goo1', 'goo2', 'goo3', err => {
+                done(err)
+            })
+        })
     })
 })
