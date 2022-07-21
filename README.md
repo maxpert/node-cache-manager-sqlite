@@ -10,6 +10,20 @@ A modern SQlite cache store for [node-cache-manager](https://github.com/BryanDon
  - Support for custom serializers
  - Smart purging support, no configuration required
 
+## Why?
+
+The goal was to have a local key value storage built on top of [proven technology](https://www.sqlite.org/testing.html).
+Other options like [node-cache-manager-fs-binary](https://github.com/sheershoff/node-cache-manager-fs-binary) have 
+similar functionality; they are littered with all sort of problems from race conditions, (multi-process) to corruption.
+SQLite on the other end has been battle tested, and using WAL allows multiple node processes to share the same
+cache across various processes, without the headaches of flat file based systems.
+
+SQLite based storage is ideal for:
+ - Faster local storage than filesystem. [Yes you heard it right](https://www.sqlite.org/fasterthanfs.html)
+ - Reslience to corruption and recovery.
+ - Multiprocess Node.js processes (typical in server deployments with many cores)
+ - Large number of entries.
+
 ## Installation
 
 ```
