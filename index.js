@@ -23,6 +23,10 @@ const TruncateStatement = "DELETE FROM %s"
 const PurgeExpiredStatement = "DELETE FROM %s WHERE expire_at < $ts"
 const UpsertManyStatementPrefix = "INSERT OR REPLACE INTO %s(key, val, created_at, expire_at) VALUES "
 
+function isObject(o) {
+    return o !== null && typeof o === 'object'
+}
+
 function now() {
     return new Date().getTime()
 }
@@ -78,7 +82,9 @@ class SqliteCacheAdapter {
     db = null
     #name = null
     #serializer = null
-    #default_ttl = 24 * 60 * 60 * 1000
+
+    // TTL in seconds
+    #default_ttl = 24 * 60 * 60
 
     /**
      * @param {string} name of key-value space
@@ -87,9 +93,10 @@ class SqliteCacheAdapter {
      */
     constructor(name, path, options) {
         const mode = options.flags || (sqlite.OPEN_CREATE | sqlite.OPEN_READWRITE)
+        const serializer = options.serializer
         this.#name = name
         this.#default_ttl = options.ttl === undefined ? this.#default_ttl : options.ttl
-        this.#serializer = serializers['cbor' || options.serializer]
+        this.#serializer = isObject(serializer) ? serializer : serializers[serializer || 'json']
 
         this.db = new sqlite.Database(path, mode, options.onOpen)
         this.db.serialize(() => {
@@ -145,14 +152,14 @@ class SqliteCacheAdapter {
         
         if (args.length % 2 > 0) {
             const last = args[args.length - 1]
-            if (last !== null && typeof last === 'object') {
+            if (isObject(last)) {
                 options = args.pop()
             }
         }
 
         const tuples = tuplize(args, 2)
         return promisified(callback, cb => {
-            const ttl = options.ttl || this.#default_ttl
+            const ttl = (options.ttl || this.#default_ttl) * 1000
             const ts = now()
             const expire = ts + ttl            
             const binding = tuples.flatMap(t => [t[0], this.#serialize(t[1]), ts, expire])
@@ -183,7 +190,7 @@ class SqliteCacheAdapter {
     set(key, value, ttl, options, callback) {
         callback = liftCallback(ttl, options, callback)
         options = liftFirst('object', ttl, options) || {}
-        ttl = liftFirst('number', ttl) || options.ttl || this.#default_ttl
+        ttl = (liftFirst('number', ttl) || options.ttl || this.#default_ttl) * 1000
 
         return promisified(callback, cb => {
             this.db.serialize(() => {
