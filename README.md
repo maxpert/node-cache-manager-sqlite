@@ -31,8 +31,8 @@ const cacheManager = require('cache-manager')
 // SQLite :memory: cache store
 const memStoreCache = cacheManager.caching({
     store: sqliteStore,
-    serializer: 'cbor', // default is 'json'
     options: {
+        serializer: 'cbor', // default is 'json'
         ttl: 20 // TTL in seconds
     }
 })
@@ -58,7 +58,7 @@ const redisStore = require('cache-manager-ioredis')
 const sqliteStore = require('cache-manager-sqlite')
 
 const redisCache = cacheManager.caching({ store: redisStore, db: 0, ttl: 600 })
-const sqliteCache = cacheManager.caching({ store: sqliteStore, path: '/cache.db', name: 'users', options{ ttl: 600 } })
+const sqliteCache = cacheManager.caching({ store: sqliteStore, path: '/tmp/cache.db', name: 'users', options{ ttl: 600 } })
 
 const multiCache = cacheManager.multiCaching([sqliteCache, redisCache])
 
