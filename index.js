@@ -181,13 +181,12 @@ class SqliteCacheAdapter {
     get(key, options, callback) {
         return promisified(liftCallback(options, callback), cb => {
             const opts = liftFirst('object', options) || {}
-            this.mget([key], opts, (err, rows) => {
+            this.mget(key, opts, (err, rows) => {
                 if (err) {
                     return cb(err)
                 }
 
-                const rs = rows.length > 0 ? rows[0] : null
-                return cb(null, rs)
+                return cb(null, rows[0])
             })
         })
     }
@@ -248,7 +247,7 @@ class SqliteCacheAdapter {
         try {
             return this.#serializer.serialize(obj)
         } catch(e) {
-            return null
+            return undefined
         }
     }
 
@@ -256,7 +255,7 @@ class SqliteCacheAdapter {
         try {
             return this.#serializer.deserialize(payload)
         } catch(e) {
-            return null
+            return undefined
         }
     }
 

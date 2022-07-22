@@ -33,9 +33,9 @@ describe('cacheManager promised', () => {
         path: '/tmp/test1.db'
     })
 
-    it('set should serialized bad object to null', async () => {
+    it('set should serialized bad object to undefined', async () => {
         await cache.set('foo-bad', function () { })
-        assert.equal(await cache.get('foo-bad'), null)
+        assert.strictEqual(await cache.get('foo-bad'), undefined)
     })
 
     it('get value when TTL within range from set', async () => {
@@ -44,7 +44,7 @@ describe('cacheManager promised', () => {
 
         await cache.set(key, valu, {ttl: -200})
         const val = await cache.get(key)
-        assert.equal(val, null)
+        assert.strictEqual(val, undefined)
     })
 
     it('should read saved value', async () => {
@@ -69,7 +69,7 @@ describe('cacheManager promised', () => {
         await cache.set(key, valu)
         await cache.del(key)
         const v = await cache.get(key)
-        assert.equal(v, null)
+        assert.strictEqual(v, undefined)
     })
 
     it('truncates database on reset', async () => {
@@ -79,7 +79,7 @@ describe('cacheManager promised', () => {
         await cache.set(key, valu)
         await cache.reset()
         const v = await cache.get(key)
-        assert.equal(v, null)
+        assert.strictEqual(v, undefined)
     })
 
     it('returns ttl of key', async () => {
@@ -102,10 +102,10 @@ describe('cacheManager promised', () => {
         const valu = {foo: 1}
 
         await cache.set(key, valu, -1)
-        assert.equal(await cache.get(key), null)
+        assert.strictEqual(await cache.get(key), undefined)
 
         await cache.set(key, valu, {ttl: -1})
-        assert.equal(await cache.get(key), null)
+        assert.strictEqual(await cache.get(key), undefined)
     })
 
     it('mget fetches array of multiple objects ', async () => {
@@ -168,14 +168,14 @@ describe('Sqlite failures failures', () => {
         }
     })
 
-    it('should return null value if stored value is junk', async () => {
+    it('should return undefined value if stored value is junk', async () => {
         const ts = new Date().getTime()
         allSpy.yieldsRight(null, [{key: 'foo', val: '~junk~', created_at: ts, expire_at: ts + 36000}])
-        assert.equal(await cache.get("foo"), null)
+        assert.strictEqual(await cache.get("foo"), undefined)
 
         allSpy.reset()
         allSpy.yieldsRight(null, [{key: 'foo', val: 'undefined', created_at: ts, expire_at: ts + 36000}])
-        assert.equal(await cache.get("foo"), null)
+        assert.strictEqual(await cache.get("foo"), undefined)
     })
 })
 
@@ -193,7 +193,7 @@ describe('sqliteStore construction', () => {
         const valu = {foo: 1}
 
         await cache.set(key, valu)
-        assert.equal(await cache.get(key), null)
+        assert.strictEqual(await cache.get(key), undefined)
     })
 })
 
@@ -203,9 +203,9 @@ describe('cacheManager callback', () => {
         store: sqliteStore
     })
 
-    it('get should return null when value does not exist', (done) => {
+    it('get should return undefined when value does not exist', (done) => {
         cache.get('!!!' + Math.random(), (err, res) => {
-            assert.equal(res, null)
+            assert.strictEqual(res, undefined)
             done(err)
         })
         

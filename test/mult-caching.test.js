@@ -1,7 +1,5 @@
 const assert = require('assert')
 const cacheManager = require('cache-manager')
-const sinon = require('sinon')
-const sqlite3 = require('sqlite3')
 
 const sqliteStore = require('../index')
 
