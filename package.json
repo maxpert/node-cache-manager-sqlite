@@ -1,6 +1,6 @@
 {
   "name": "cache-manager-sqlite",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "A modern SQLite store for node-cache-manager",
   "main": "index.js",
   "scripts": {
