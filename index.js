@@ -194,7 +194,7 @@ class SqliteCacheAdapter {
     set(key, value, ttl, options, callback) {
         callback = liftCallback(ttl, options, callback)
         options = liftFirst('object', ttl, options) || {}
-        ttl = (liftFirst('number', ttl) || options.ttl || this.#default_ttl) * 1000
+        ttl = (liftFirst('number', ttl) || options.ttl || this.#default_ttl)
 
         if (callback) {
             return this.mset(key, value, {...options, ttl}, callback)
