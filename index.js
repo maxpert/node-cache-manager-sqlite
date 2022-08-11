@@ -5,7 +5,8 @@ const serializers = require('./serializers')
 
 const ConfigurePragmas = `
 PRAGMA main.synchronous = NORMAL;
-PRAGMA main.journal_mode = WAL;
+PRAGMA main.journal_mode = WAL2;
+PRAGMA main.auto_vacuum = INCREMENTAL;
 `
 const CreateTableStatement = `
 CREATE TABLE IF NOT EXISTS %s (
