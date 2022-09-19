@@ -6,7 +6,7 @@ A modern SQlite cache store for [node-cache-manager](https://github.com/BryanDon
  - `async`/`await` support with Promise
  - 100% test coverage and production ready
  - Optimized `mset`/`mget` support
- - Supports CBOR for efficient and fast storage (selectable between `json` or `cbor` default: `json`)
+ - Supports CBOR for efficient and fast storage (selectable between `json` or `cbor` default: `cbor`)
  - Support for custom serializers
  - Smart purging support, no configuration required
 

@@ -80,7 +80,11 @@ class SqliteCacheAdapter {
      * @property {sqlite.Database} db for db instance
      */
     db = null
+
+    // Name of key-value space
     #name = null
+
+    // Seralizer to serialize/deserialize payloads
     #serializer = null
 
     // TTL in seconds
@@ -96,9 +100,9 @@ class SqliteCacheAdapter {
         const ser = options.serializer
         this.#name = name
         this.#default_ttl = typeof options.ttl === 'number' ? options.ttl : this.#default_ttl
-        this.#serializer = isObject(ser) ? ser : serializers[ser || 'json']
+        this.#serializer = isObject(ser) ? ser : serializers[ser || 'cbor']
 
-        this.db = new sqlite.Database(path, mode, options.onOpen)
+        this.db = new sqlite.cached.Database(path, mode, options.onOpen)
         this.db.serialize(() => {
             const stmt = ConfigurePragmas + util.format(CreateTableStatement, name, name, name)
             this.db.exec(stmt, options.onReady)
