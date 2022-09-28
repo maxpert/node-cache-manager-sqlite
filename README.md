@@ -46,7 +46,7 @@ const cacheManager = require('cache-manager')
 const memStoreCache = cacheManager.caching({
     store: sqliteStore,
     options: {
-        serializer: 'cbor', // default is 'json'
+        serializer: 'json', // default is 'cbor'
         ttl: 20 // TTL in seconds
     }
 })
@@ -55,10 +55,7 @@ const memStoreCache = cacheManager.caching({
 const cache = cacheManager.caching({
     store: sqliteStore,
     name: 'employees',
-    path: '/tmp/cache.db',
-    options: {
-        serializer: 'cbor'
-    }
+    path: '/tmp/cache.db'
 })
 
 
